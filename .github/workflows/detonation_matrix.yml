@@ -18,10 +18,9 @@ jobs:
 
       - name: Initialize eBPF Sentinel & PCAP Capture
         run: |
-          sudo apt-get update && sudo apt-get install -y tcpdump bpfcc-tools python3-bpfcc
-          # Start capturing raw network traffic in the background
+          sudo apt-get update && sudo apt-get install -y tcpdump bpfcc-tools python3-bpfcc python3-pip
+          pip3 install google-generativeai # <-- Added this line
           sudo tcpdump -i eth0 -w /tmp/saks_traffic.pcap &
-          # Start the eBPF kernel tracer in the background
           sudo python3 ./core/ebpf_probes/saks_tracer.py > /tmp/saks_syscalls.log &
           
       - name: Clone Target Artifact (Untrusted Execution Space)
