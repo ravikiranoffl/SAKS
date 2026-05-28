@@ -1,4 +1,4 @@
-name: 2. SAKS Detonation Matrix
+name: SAKS Detonation Matrix
 
 on:
   repository_dispatch:
