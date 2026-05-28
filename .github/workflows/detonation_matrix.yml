@@ -1,0 +1,53 @@
+name: 2. SAKS Detonation Matrix
+
+on:
+  repository_dispatch:
+    types: [trigger_detonation]
+
+jobs:
+  sandbox-detonate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Dynamically pulls the repositories to test
+        target_repo: ${{ github.event.client_payload.repos[*].target_repo }}
+        
+    steps:
+      - name: Checkout SAKS Core Architecture
+        uses: actions/checkout@v4
+
+      - name: Initialize eBPF Sentinel & PCAP Capture
+        run: |
+          sudo apt-get update && sudo apt-get install -y tcpdump bpfcc-tools python3-bpfcc
+          # Start capturing raw network traffic in the background
+          sudo tcpdump -i eth0 -w /tmp/saks_traffic.pcap &
+          # Start the eBPF kernel tracer in the background
+          sudo python3 ./core/ebpf_probes/saks_tracer.py > /tmp/saks_syscalls.log &
+          
+      - name: Clone Target Artifact (Untrusted Execution Space)
+        run: git clone https://github.com/${{ matrix.target_repo }} target_code || echo "Repo clone failed, continuing..."
+          
+      - name: Detonate Payload
+        timeout-minutes: 5
+        continue-on-error: true # We EXPECT this to potentially crash or act maliciously
+        run: |
+          cd target_code
+          echo "Simulating detonation of untrusted makefile or setup.sh..."
+          # chmod +x ./setup.sh && ./setup.sh
+          
+      - name: Finalize Telemetry & AI Introspection
+        env:
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+        run: |
+          # Kill the background surveillance tools
+          sudo pkill tcpdump
+          sudo pkill -f saks_tracer.py
+          
+          # Pass the captured data to the AI for reasoning
+          python3 ./core/pcap_analyzer/evaluate.py --repo ${{ matrix.target_repo }} --pcap /tmp/saks_traffic.pcap --logs /tmp/saks_syscalls.log
+          
+      - name: Commit Intelligence to GitOps State
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "🚨 SAKS Threat Matrix Update - ${{ matrix.target_repo }}"
+          file_pattern: "threat-matrix/*"
