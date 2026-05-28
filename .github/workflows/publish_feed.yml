@@ -1,0 +1,41 @@
+name: 3. SAKS Feed Publisher
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'threat-matrix/**' # Only run when new threats are added
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy-threat-feed:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Pages Environment
+        uses: actions/configure-pages@v4
+
+      - name: Prepare Feed Directory
+        run: |
+          mkdir -p public_feed
+          cp threat-matrix/blocklist.json public_feed/feed.json
+          echo "Threat feed prepared for distribution."
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './public_feed'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
