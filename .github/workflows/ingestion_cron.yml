@@ -2,8 +2,8 @@ name: 1. SAKS Ingestion Sweep
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # Runs every 6 hours
-  workflow_dispatch: # Allows manual trigger for testing
+    - cron: '0 */6 * * *' # Runs autonomously every 6 hours
+  workflow_dispatch: # Allows manual trigger for testing via GitHub UI
 
 jobs:
   scrape-and-queue:
@@ -16,8 +16,8 @@ jobs:
         id: gather_intel
         run: |
           echo "Simulating NVD API and GitHub Search scraping..."
-          # In reality, this would be a Python script aggregating NVD data.
-          # For testing, we generate a static JSON matrix payload.
+          # In a full production environment, this would be a Python script 
+          # aggregating live NVD data. For testing, we generate a static JSON matrix payload.
           cat <<EOF > targets.json
           {"include": [{"target_repo": "fake-user/CVE-2026-9999-PoC"}, {"target_repo": "malicious-actor/Spring4Shell-PoC"}]}
           EOF
@@ -25,6 +25,6 @@ jobs:
       - name: Trigger Detonation Matrix
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.DISPATCH_TOKEN }} # Uses your Personal Access Token to bypass the GitHub Action loop restriction
           event-type: trigger_detonation
-          client-payload: '{"repos": [{"target_repo": "fake-user/CVE-2026-9999-PoC"}]}' # Passed dynamically in production
+          client-payload: '{"repos": [{"target_repo": "fake-user/CVE-2026-9999-PoC"}]}'
